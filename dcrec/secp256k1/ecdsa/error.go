@@ -86,6 +86,10 @@ const (
 	// greater than or equal to the group order.
 	ErrSigSTooBig = ErrorKind("ErrSigSTooBig")
 
+	// ErrSigSMalleable is returned when a signature has S with a value that is
+	// greater than or equal to half of the group order.
+	ErrSigSMalleable = ErrorKind("ErrSigSMalleable")
+
 	// ErrSigInvalidLen is returned when a signature that should be a compact
 	// signature is not the required length.
 	ErrSigInvalidLen = ErrorKind("ErrSigInvalidLen")

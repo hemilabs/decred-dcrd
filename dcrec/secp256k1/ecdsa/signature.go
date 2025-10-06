@@ -792,8 +792,23 @@ func SignCompact(key *secp256k1.PrivateKey, hash []byte, isCompressedKey bool) [
 // RecoverCompact attempts to recover the secp256k1 public key from the provided
 // compact signature and message hash.  It first verifies the signature, and, if
 // the signature matches then the recovered public key will be returned as well
-// as a boolean indicating whether or not the original key was compressed.
+// as a boolean indicating whether the original key was compressed.
 func RecoverCompact(signature, hash []byte) (*secp256k1.PublicKey, bool, error) {
+	return recoverCompact(signature, hash, false)
+}
+
+// RecoverCompactLowS attempts to recover the secp256k1 public key from the
+// provided compact signature and message hash. It first verifies the signature,
+// and, if the signature matches then the recovered public key will be returned
+// as well as a boolean indicating whether the original key was compressed.
+//
+// Additionally, this function requires the signature S value to be less than
+// half of the group order to ensure the signature is not malleable.
+func RecoverCompactLowS(signature, hash []byte) (*secp256k1.PublicKey, bool, error) {
+	return recoverCompact(signature, hash, true)
+}
+
+func recoverCompact(signature, hash []byte, enforceLowS bool) (*secp256k1.PublicKey, bool, error) {
 	// The following is very loosely based on the information and algorithm that
 	// describes recovering a public key from and ECDSA signature in section
 	// 4.1.6 of [SEC1].
@@ -902,6 +917,13 @@ func RecoverCompact(signature, hash []byte) (*secp256k1.PublicKey, bool, error) 
 	if s.IsZero() {
 		str := "invalid signature: S is 0"
 		return nil, false, signatureError(ErrSigSIsZero, str)
+	}
+
+	// If we are enforcing low S values to prevent signature malleability,
+	// require that s is in [1, (N-1)/2].
+	if enforceLowS && s.IsOverHalfOrder() {
+		str := "invalid signature: S >= half group order"
+		return nil, false, signatureError(ErrSigSMalleable, str)
 	}
 
 	// Step 2.
